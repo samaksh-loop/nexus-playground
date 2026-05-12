@@ -1,0 +1,60 @@
+.shell {
+  padding: 2rem 1.5rem 3rem;
+  text-align: left;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.panel {
+  margin-top: 2rem;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.panel p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ok code,
+.err code {
+  font-size: 0.9em;
+}
+
+.ok {
+  color: var(--text-h);
+}
+
+.err {
+  color: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .err {
+    color: #fca5a5;
+  }
+}
+
+.muted {
+  opacity: 0.75;
+}
