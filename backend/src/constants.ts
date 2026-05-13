@@ -1,5 +1,7 @@
 import type { Vendor, LifecycleStep, SlotConfig, Settings } from './types';
 
+export const TEMP_TTL_MS = 30 * 60 * 1000;
+
 export enum BookingStatus {
   CREATED = 'created',
   CONFIRMED = 'confirmed',
