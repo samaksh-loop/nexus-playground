@@ -97,3 +97,8 @@ export interface LifecycleRunStep {
   result?: WebhookFireResult;
   error?: string;
 }
+
+export interface TempEntry {
+  body: Record<string, unknown>;
+  expiresAt: number;
+}
