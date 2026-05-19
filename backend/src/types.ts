@@ -102,3 +102,11 @@ export interface TempEntry {
   body: Record<string, unknown>;
   expiresAt: number;
 }
+
+export type RazorpayEvent = 'order.paid' | 'payment.failed';
+
+export interface RazorpayFireResult {
+  status: number;
+  ok: boolean;
+  body: string;
+}

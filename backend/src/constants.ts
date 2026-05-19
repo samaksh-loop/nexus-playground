@@ -1,6 +1,8 @@
-import type { Vendor, LifecycleStep, SlotConfig, Settings } from './types';
+import type { Vendor, LifecycleStep, SlotConfig, Settings, RazorpayEvent } from './types';
 
 export const TEMP_TTL_MS = 30 * 60 * 1000;
+
+export const RAZORPAY_EVENTS: RazorpayEvent[] = ['order.paid', 'payment.failed'];
 
 export enum BookingStatus {
   CREATED = 'created',
