@@ -5,8 +5,9 @@ export const ENDPOINTS = {
     DELETE_BOOKING: (id: string) => `/api/bookings/${id}`,
     FETCH_LIFECYCLES: '/api/lifecycles',
     SIMULATE_WEBHOOK: '/api/simulate/webhook',
+    STREAM_LIFECYCLE: '/api/simulate/lifecycle',
     SETTINGS: '/api/settings',
     FETCH_SLOTS: '/api/slots',
     SAVE_VENDOR_SLOTS: (vendor: Vendor) => `/api/slots/${vendor}`,
-    STREAM_LIFECYCLE: '/api/simulate/lifecycle',
+    SIMULATE_RAZORPAY: '/api/razorpay/simulate',
 }

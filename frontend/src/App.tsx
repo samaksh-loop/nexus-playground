@@ -5,6 +5,7 @@ import { useLifecycles } from './hooks/useLifecycles';
 import { useSettings } from './hooks/useSettings';
 import BookingsTab from './components/BookingsTab';
 import SettingsTab from './components/SettingsTab';
+import RazorpayTab from './components/RazorpayTab';
 import {
   AppShell,
   AppHeader,
@@ -19,7 +20,7 @@ import {
 import { BadgeCount } from './styles/common.styles';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'bookings' | 'settings'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'payments' | 'settings'>('bookings');
   const [healthStatus, setHealthStatus] = useState<'online' | 'offline' | 'pending'>('pending');
 
   const bookingsState = useBookings();
@@ -57,6 +58,9 @@ function App() {
             <BadgeCount>{bookingsState.allBookings.length}</BadgeCount>
           )}
         </TabBtn>
+        <TabBtn $active={activeTab === 'payments'} onClick={() => setActiveTab('payments')}>
+          Payments
+        </TabBtn>
         <TabBtn $active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
           Settings
         </TabBtn>
@@ -75,6 +79,7 @@ function App() {
           lifecycleData={lifecycleData}
         />
       )}
+      {activeTab === 'payments' && <RazorpayTab />}
       {activeTab === 'settings' && (
         <SettingsTab
           settings={settingsState.settings}

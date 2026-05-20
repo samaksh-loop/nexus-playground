@@ -12,6 +12,7 @@ import ekinCareRoutes from './routes/vendors/ekinCare.routes.js';
 
 import simulatorRoutes from './routes/simulator.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+import razorpayRoutes from './routes/razorpay.routes.js';
 
 import { VendorPrefix } from './constants.js';
 
@@ -36,6 +37,7 @@ app.use(`/${VendorPrefix.EKIN_CARE}`,     ekinCareRoutes);
 
 app.use('/api', simulatorRoutes);
 app.use('/api', settingsRoutes);
+app.use('/api', razorpayRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'nexus-playground-backend' });
