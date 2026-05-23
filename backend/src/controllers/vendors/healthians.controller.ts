@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model';
-import { getSlots } from '../../models/config.model';
-import { BookingStatus } from '../../constants';
-import type { Booking, Sample } from '../../types';
+import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model.js';
+import { getSlots } from '../../models/config.model.js';
+import { BookingStatus } from '../../constants.js';
+import type { Booking, Sample } from '../../types.js';
 
 let tokenCounter = 1;
 
@@ -27,8 +27,8 @@ export function freezeSlot(_req: Request, res: Response): void {
   res.json({ status: 'success' });
 }
 
-export function createBookingHandler(req: Request, res: Response): void {
-  const id = nextBookingId();
+export async function createBookingHandler(req: Request, res: Response): Promise<void> {
+  const id = await nextBookingId();
   const body = req.body as Record<string, unknown>;
   const customers = (body.customers as Record<string, unknown>[] | undefined) ?? [];
 
@@ -52,32 +52,40 @@ export function createBookingHandler(req: Request, res: Response): void {
     webhookHistory: [],
   };
 
-  createBooking(booking);
+  await createBooking(booking);
   res.json({ status: true, message: 'Booking created', booking_id: id, data: {} });
 }
 
-export function cancelBookingHandler(req: Request, res: Response): void {
+export async function cancelBookingHandler(req: Request, res: Response): Promise<void> {
   const body = req.body as Record<string, unknown>;
   const bookingId = (body.booking_id ?? body.ref_booking_id) as string | number | undefined;
   if (bookingId) {
-    const b = getBookingByPartnerId(bookingId);
-    if (b) updateBookingStatus(b.partnerBookingId, BookingStatus.CANCELLED, {
-      event: 'api.cancel', label: 'Cancelled via API',
-      firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
-    });
+    const b = await getBookingByPartnerId(bookingId);
+    if (!b) {
+      console.warn(`[healthians] cancelBooking: booking not found for bookingId=${bookingId}`);
+    } else {
+      await updateBookingStatus(b.partnerBookingId, BookingStatus.CANCELLED, {
+        event: 'api.cancel', label: 'Cancelled via API',
+        firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
+      });
+    }
   }
   res.json({ status: true, message: 'Booking cancelled' });
 }
 
-export function rescheduleBookingHandler(req: Request, res: Response): void {
+export async function rescheduleBookingHandler(req: Request, res: Response): Promise<void> {
   const body = req.body as Record<string, unknown>;
   const bookingId = (body.booking_id ?? body.ref_booking_id) as string | number | undefined;
   if (bookingId) {
-    const b = getBookingByPartnerId(bookingId);
-    if (b) updateBookingStatus(b.partnerBookingId, BookingStatus.RESCHEDULED, {
-      event: 'api.reschedule', label: 'Rescheduled via API',
-      firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
-    });
+    const b = await getBookingByPartnerId(bookingId);
+    if (!b) {
+      console.warn(`[healthians] rescheduleBooking: booking not found for bookingId=${bookingId}`);
+    } else {
+      await updateBookingStatus(b.partnerBookingId, BookingStatus.RESCHEDULED, {
+        event: 'api.reschedule', label: 'Rescheduled via API',
+        firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
+      });
+    }
   }
   res.json({ status: true, message: 'Booking rescheduled', data: { booking_id: bookingId } });
 }

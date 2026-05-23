@@ -31,11 +31,6 @@ export interface Booking {
   webhookHistory: WebhookHistoryEntry[];
 }
 
-export interface PersistedStore {
-  bookings: Booking[];
-  idCounter: number;
-}
-
 export interface LifecycleStep {
   event: string;
   label: string;
@@ -89,13 +84,6 @@ export interface WebhookFireResult {
   status: number;
   ok: boolean;
   body: string;
-}
-
-export interface LifecycleRunStep {
-  event: string;
-  label: string;
-  result?: WebhookFireResult;
-  error?: string;
 }
 
 export interface TempEntry {

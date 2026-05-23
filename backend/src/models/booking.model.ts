@@ -1,79 +1,77 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import type { Booking, PersistedStore, WebhookHistoryEntry } from '../types';
+import sql from '../db.js';
+import type { Booking, WebhookHistoryEntry } from '../types.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '..', '..', 'data');
-const STORE_PATH = join(DATA_DIR, 'bookings.json');
-
-let bookings: Booking[] = [];
-let idCounter = 10000;
-
-export function loadBookingStore(): void {
-  mkdirSync(DATA_DIR, { recursive: true });
-  if (existsSync(STORE_PATH)) {
-    try {
-      const stored = JSON.parse(readFileSync(STORE_PATH, 'utf8')) as PersistedStore;
-      bookings = stored.bookings ?? [];
-      idCounter = stored.idCounter ?? 10000;
-    } catch (err) {
-      console.error('Failed to load booking store, using defaults:', err);
-      bookings = [];
-    }
-  }
+function rowToBooking(row: Record<string, unknown>): Booking {
+  const data = (row.data ?? {}) as Record<string, unknown>;
+  const createdAt = new Date(String(row.created_at)).toISOString();
+  return {
+    partnerBookingId: row.partner_booking_id as string,
+    vendor: row.vendor as Booking['vendor'],
+    status: row.status as string,
+    createdAt,
+    ...data,
+  } as Booking;
 }
 
-function persist(): void {
-  try {
-    writeFileSync(STORE_PATH, JSON.stringify({ bookings, idCounter } satisfies PersistedStore, null, 2));
-  } catch (err) {
-    console.error('Failed to persist booking store:', err);
-  }
+export async function nextBookingId(): Promise<number> {
+  const rows = await sql`SELECT nextval('booking_id_seq') AS nextval`;
+  return Number(rows[0].nextval);
 }
 
-export function nextBookingId(): number {
-  return ++idCounter;
+export async function getAllBookings(): Promise<Booking[]> {
+  const rows = await sql`SELECT * FROM bookings ORDER BY created_at DESC`;
+  return rows.map(rowToBooking);
 }
 
-export function getAllBookings(): Booking[] {
-  return [...bookings].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+export async function getBookingByPartnerId(partnerBookingId: string | number): Promise<Booking | undefined> {
+  const rows = await sql`SELECT * FROM bookings WHERE partner_booking_id = ${String(partnerBookingId)}`;
+  return rows[0] ? rowToBooking(rows[0]) : undefined;
 }
 
-export function getBookingByPartnerId(partnerBookingId: string | number): Booking | undefined {
-  return bookings.find((b) => b.partnerBookingId === String(partnerBookingId));
-}
-
-export function createBooking(booking: Booking): Booking {
-  try {
-    bookings.push(booking);
-    persist();
-  } catch (err) {
-    bookings.pop();
-    throw err;
-  }
+export async function createBooking(booking: Booking): Promise<Booking> {
+  const { partnerBookingId, vendor, status, createdAt, ...data } = booking;
+  await sql`
+    INSERT INTO bookings (partner_booking_id, vendor, status, created_at, data)
+    VALUES (
+      ${partnerBookingId},
+      ${vendor},
+      ${status},
+      ${createdAt}::timestamptz,
+      ${sql.json(data as unknown as Parameters<typeof sql.json>[0])}
+    )
+  `;
   return booking;
 }
 
-export function updateBookingStatus(
+export async function updateBookingStatus(
   partnerBookingId: string | number,
   status: string,
   historyEntry: WebhookHistoryEntry,
-): Booking | null {
-  const booking = getBookingByPartnerId(partnerBookingId);
-  if (!booking) return null;
+  dataUpdates?: Partial<Booking>,
+): Promise<Booking | null> {
+  const id = String(partnerBookingId);
+  const rows = await sql`SELECT * FROM bookings WHERE partner_booking_id = ${id}`;
+  if (!rows[0]) return null;
+
+  const booking = rowToBooking(rows[0]);
   booking.status = status;
-  booking.webhookHistory.push(historyEntry);
-  persist();
+  booking.webhookHistory = [...(booking.webhookHistory ?? []), historyEntry];
+  if (dataUpdates) Object.assign(booking, dataUpdates);
+
+  const { partnerBookingId: _pid, vendor: _v, status: _s, createdAt: _c, ...data } = booking;
+  await sql`
+    UPDATE bookings
+    SET status = ${status}, data = ${sql.json(data as unknown as Parameters<typeof sql.json>[0])}
+    WHERE partner_booking_id = ${id}
+  `;
   return booking;
 }
 
-export function deleteBooking(partnerBookingId: string | number): boolean {
-  const idx = bookings.findIndex((b) => b.partnerBookingId === String(partnerBookingId));
-  if (idx === -1) return false;
-  bookings.splice(idx, 1);
-  persist();
-  return true;
+export async function deleteBooking(partnerBookingId: string | number): Promise<boolean> {
+  const rows = await sql`
+    DELETE FROM bookings
+    WHERE partner_booking_id = ${String(partnerBookingId)}
+    RETURNING partner_booking_id
+  `;
+  return rows.length > 0;
 }

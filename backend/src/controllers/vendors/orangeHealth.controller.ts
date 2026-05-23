@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model';
-import { getSlots } from '../../models/config.model';
-import { BookingStatus } from '../../constants';
-import type { Booking } from '../../types';
+import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model.js';
+import { getSlots } from '../../models/config.model.js';
+import { BookingStatus } from '../../constants.js';
+import type { Booking } from '../../types.js';
 
 export function getServiceability(req: Request, res: Response): void {
   const rawSlots = getSlots('orange-health');
@@ -16,8 +16,8 @@ export function getServiceability(req: Request, res: Response): void {
   res.json({ status: 'Location is serviceable', slots });
 }
 
-export function createOrder(req: Request, res: Response): void {
-  const id = nextBookingId();
+export async function createOrder(req: Request, res: Response): Promise<void> {
+  const id = await nextBookingId();
   const body = req.body as Record<string, unknown>;
   const pd = body.patient_details as Record<string, unknown> | undefined;
 
@@ -35,7 +35,7 @@ export function createOrder(req: Request, res: Response): void {
     webhookHistory: [],
   };
 
-  createBooking(booking);
+  await createBooking(booking);
   res.json({
     request_id: id,
     token: `pg_oh_token_${id}`,
@@ -43,10 +43,12 @@ export function createOrder(req: Request, res: Response): void {
   });
 }
 
-export function cancelOrder(req: Request, res: Response): void {
-  const booking = getBookingByPartnerId(req.params.partnerBookingId as string | number);
-  if (booking) {
-    updateBookingStatus(booking.partnerBookingId, BookingStatus.CANCELLED, {
+export async function cancelOrder(req: Request, res: Response): Promise<void> {
+  const booking = await getBookingByPartnerId(req.params.partnerBookingId as string);
+  if (!booking) {
+    console.warn(`[orange-health] cancelOrder: booking not found for partnerBookingId=${req.params.partnerBookingId}`);
+  } else {
+    await updateBookingStatus(booking.partnerBookingId, BookingStatus.CANCELLED, {
       event: 'api.cancel', label: 'Cancelled via API',
       firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
     });
@@ -54,18 +56,17 @@ export function cancelOrder(req: Request, res: Response): void {
   res.json({ message: 'processing' });
 }
 
-export function rescheduleOrder(req: Request, res: Response): void {
+export async function rescheduleOrder(req: Request, res: Response): Promise<void> {
   const body = req.body as Record<string, unknown>;
-  const booking = getBookingByPartnerId(req.params.partnerBookingId as string | number);
-  if (booking) {
-    if (body.requested_slot_time) {
-      booking.collectionSlot = body.requested_slot_time as string;
-      booking.collectionDate = (body.requested_slot_time as string).slice(0, 10);
-    }
-    updateBookingStatus(booking.partnerBookingId, BookingStatus.RESCHEDULED, {
+  const booking = await getBookingByPartnerId(req.params.partnerBookingId as string);
+  if (!booking) {
+    console.warn(`[orange-health] rescheduleOrder: booking not found for partnerBookingId=${req.params.partnerBookingId}`);
+  } else {
+    const slot = body.requested_slot_time as string | undefined;
+    await updateBookingStatus(booking.partnerBookingId, BookingStatus.RESCHEDULED, {
       event: 'api.reschedule', label: 'Rescheduled via API',
       firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
-    });
+    }, slot ? { collectionSlot: slot, collectionDate: slot.slice(0, 10) } : undefined);
   }
   res.json({ result: { status: 'ok' } });
 }

@@ -1,32 +1,15 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import type { Settings, SlotConfig } from '../types';
-import { DEFAULT_SETTINGS, getDefaultSlots } from '../constants';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '..', '..', 'data');
-const SETTINGS_PATH = join(DATA_DIR, 'settings.json');
-const SLOTS_PATH = join(DATA_DIR, 'slots.json');
+import sql from '../db.js';
+import type { Settings, SlotConfig } from '../types.js';
+import { DEFAULT_SETTINGS, getDefaultSlots } from '../constants.js';
 
 let settings: Settings = { ...DEFAULT_SETTINGS };
 let slots: SlotConfig = getDefaultSlots();
 
-export function loadConfig(): void {
-  mkdirSync(DATA_DIR, { recursive: true });
-  if (existsSync(SETTINGS_PATH)) {
-    try {
-      settings = { ...DEFAULT_SETTINGS, ...JSON.parse(readFileSync(SETTINGS_PATH, 'utf8')) } as Settings;
-    } catch (err) {
-      console.error('Failed to load settings, using defaults:', err);
-    }
-  }
-  if (existsSync(SLOTS_PATH)) {
-    try {
-      slots = { ...getDefaultSlots(), ...JSON.parse(readFileSync(SLOTS_PATH, 'utf8')) } as SlotConfig;
-    } catch (err) {
-      console.error('Failed to load slots, using defaults:', err);
-    }
+export async function loadConfig(): Promise<void> {
+  const rows = await sql`SELECT key, value FROM config WHERE key IN ('settings', 'slots')`;
+  for (const row of rows) {
+    if (row.key === 'settings') settings = { ...DEFAULT_SETTINGS, ...(row.value as Settings) };
+    if (row.key === 'slots') slots = { ...getDefaultSlots(), ...(row.value as SlotConfig) };
   }
 }
 
@@ -38,16 +21,14 @@ export function getSettings(): Settings {
   return clone(settings);
 }
 
-export function updateSettings(updates: Partial<Settings>): Settings {
+export async function updateSettings(updates: Partial<Settings>): Promise<Settings> {
   const newSettings = { ...settings, ...updates };
-  try {
-    writeFileSync(SETTINGS_PATH, JSON.stringify(newSettings, null, 2));
-    settings = newSettings;
-  } catch (err) {
-    console.error('Failed to persist settings:', err);
-    throw err;
-  }
-  return settings;
+  await sql`
+    INSERT INTO config (key, value) VALUES ('settings', ${sql.json(newSettings as unknown as Parameters<typeof sql.json>[0])})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `;
+  settings = newSettings;
+  return clone(settings);
 }
 
 export function getSlots<V extends keyof SlotConfig>(vendor: V): SlotConfig[V] {
@@ -58,16 +39,17 @@ export function getAllSlots(): SlotConfig {
   return clone(slots);
 }
 
-export function updateSlots<V extends keyof SlotConfig>(vendor: V, updatedSlots: SlotConfig[V]): SlotConfig[V] {
+export async function updateSlots<V extends keyof SlotConfig>(
+  vendor: V,
+  updatedSlots: SlotConfig[V],
+): Promise<SlotConfig[V]> {
   const newSlots = { ...slots, [vendor]: updatedSlots };
-  try {
-    writeFileSync(SLOTS_PATH, JSON.stringify(newSlots, null, 2));
-    slots = newSlots;
-  } catch (err) {
-    console.error('Failed to persist slots:', err);
-    throw err;
-  }
-  return slots[vendor];
+  await sql`
+    INSERT INTO config (key, value) VALUES ('slots', ${sql.json(newSlots as unknown as Parameters<typeof sql.json>[0])})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `;
+  slots = newSlots;
+  return clone(slots[vendor]);
 }
 
 export function getWebhookSecrets(): Record<string, string> {
@@ -78,10 +60,8 @@ export function getWebhookSecrets(): Record<string, string> {
     'ekin-care':     process.env.EKIN_CARE_WEBHOOK_SECRET_KEY ?? '',
   };
   const missing = Object.entries(secrets)
-    .filter(([, value]) => !value)
+    .filter(([, v]) => !v)
     .map(([vendor]) => vendor);
-  if (missing.length) {
-    throw new Error(`Missing webhook secret(s): ${missing.join(', ')}`);
-  }
+  if (missing.length) throw new Error(`Missing webhook secret(s): ${missing.join(', ')}`);
   return clone(secrets);
 }

@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model';
-import { getSlots } from '../../models/config.model';
-import { BookingStatus } from '../../constants';
-import type { Booking, Sample } from '../../types';
+import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model.js';
+import { getSlots } from '../../models/config.model.js';
+import { BookingStatus } from '../../constants.js';
+import type { Booking, Sample } from '../../types.js';
 
 let tokenCounter = 1;
 
@@ -48,8 +48,8 @@ export function getSlotsForProvider(req: Request, res: Response): void {
   res.json({ date, slots, booking_slots: [{ date, slots }], report_tat: '24 hours', interval: 60 });
 }
 
-export function createAppointment(req: Request, res: Response): void {
-  const id = nextBookingId();
+export async function createAppointment(req: Request, res: Response): Promise<void> {
+  const id = await nextBookingId();
   const appointmentId = `PG_APT_${id}`;
   const body = req.body as Record<string, unknown>;
   const customers = (body.customers as Record<string, unknown>[] | undefined) ?? [];
@@ -75,31 +75,34 @@ export function createAppointment(req: Request, res: Response): void {
     webhookHistory: [],
   };
 
-  createBooking(booking);
+  await createBooking(booking);
   res.json({ booking_id: id, appointment_id: appointmentId, status: 'created' });
 }
 
-export function cancelAppointment(req: Request, res: Response): void {
-  const b = getBookingByPartnerId(req.params.partnerBookingId as string | number);
-  if (b) updateBookingStatus(b.partnerBookingId, BookingStatus.CANCELLED, {
-    event: 'api.cancel', label: 'Cancelled via API',
-    firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
-  });
+export async function cancelAppointment(req: Request, res: Response): Promise<void> {
+  const b = await getBookingByPartnerId(req.params.partnerBookingId as string);
+  if (!b) {
+    console.warn(`[ekin-care] cancelAppointment: booking not found for partnerBookingId=${req.params.partnerBookingId}`);
+  } else {
+    await updateBookingStatus(b.partnerBookingId, BookingStatus.CANCELLED, {
+      event: 'api.cancel', label: 'Cancelled via API',
+      firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
+    });
+  }
   res.json({ message: 'success' });
 }
 
-export function rescheduleAppointment(req: Request, res: Response): void {
+export async function rescheduleAppointment(req: Request, res: Response): Promise<void> {
   const body = req.body as Record<string, unknown>;
-  const b = getBookingByPartnerId(req.params.partnerBookingId as string | number);
-  if (b) {
-    if (body.appointment_date_time) {
-      b.collectionSlot = body.appointment_date_time as string;
-      b.collectionDate = (body.appointment_date_time as string).slice(0, 10);
-    }
-    updateBookingStatus(b.partnerBookingId, BookingStatus.RESCHEDULED, {
+  const b = await getBookingByPartnerId(req.params.partnerBookingId as string);
+  if (!b) {
+    console.warn(`[ekin-care] rescheduleAppointment: booking not found for partnerBookingId=${req.params.partnerBookingId}`);
+  } else {
+    const slot = body.appointment_date_time as string | undefined;
+    await updateBookingStatus(b.partnerBookingId, BookingStatus.RESCHEDULED, {
       event: 'api.reschedule', label: 'Rescheduled via API',
       firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
-    });
+    }, slot ? { collectionSlot: slot, collectionDate: slot.slice(0, 10) } : undefined);
   }
   res.json({ message: 'success' });
 }
