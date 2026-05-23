@@ -1,4 +1,4 @@
-import type { Booking, LifecycleData, Settings, SlotConfig, WebhookFireResult, Vendor, RazorpayEvent, RazorpayFireResult } from './types';
+import type { Booking, LifecycleData, Settings, SlotConfig, WebhookFireResult, Vendor, RazorpayEvent, RazorpayRefundEvent, RazorpayFireResult } from './types';
 import { ENDPOINTS } from './endpoints';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -81,5 +81,17 @@ export function simulateRazorpayWebhook(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ orderId, paymentId, event }),
+  });
+}
+
+export function simulateRazorpayRefundWebhook(
+  refundId: string,
+  paymentId: string,
+  event: RazorpayRefundEvent,
+): Promise<RazorpayFireResult> {
+  return request<RazorpayFireResult>(ENDPOINTS.SIMULATE_RAZORPAY_REFUND, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refundId, paymentId, event }),
   });
 }

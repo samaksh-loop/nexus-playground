@@ -10,4 +10,5 @@ export const ENDPOINTS = {
     FETCH_SLOTS: '/api/slots',
     SAVE_VENDOR_SLOTS: (vendor: Vendor) => `/api/slots/${vendor}`,
     SIMULATE_RAZORPAY: '/api/razorpay/simulate',
+    SIMULATE_RAZORPAY_REFUND: '/api/razorpay/simulate-refund',
 }

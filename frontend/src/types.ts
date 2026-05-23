@@ -105,6 +105,8 @@ export interface TempEntry {
 
 export type RazorpayEvent = 'order.paid' | 'payment.failed';
 
+export type RazorpayRefundEvent = 'refund.created' | 'refund.processed' | 'refund.failed' | 'refund.speed_changed';
+
 export interface RazorpayFireResult {
   status: number;
   ok: boolean;
