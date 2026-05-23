@@ -90,9 +90,9 @@ export function buildOrangeHealthPayload(event: string, booking: Booking): unkno
         order_id: id,
         request_id: id,
         file_name: `report_${id}.pdf`,
-        file_url: `${PLACEHOLDER.REPORT_BASE_URL}/report_${id}.pdf`,
-        public_file_url: `${PLACEHOLDER.REPORT_BASE_URL}/public/report_${id}.pdf`,
-        tokenize_public_file_url: `${PLACEHOLDER.REPORT_BASE_URL}/public/report_${id}.pdf?token=pg_test_token`,
+        file_url: PLACEHOLDER.STUB_PDF_URL,
+        public_file_url: PLACEHOLDER.STUB_PDF_URL,
+        tokenize_public_file_url: PLACEHOLDER.STUB_PDF_URL,
       }];
       break;
     case 'order.cancelled':
@@ -140,7 +140,7 @@ export function buildHealthiansPayload(event: string, booking: Booking): unknown
         booking_id: bookingId,
         data: {
           vendor_customer_id: sampleId,
-          report_url: `${PLACEHOLDER.REPORT_BASE_URL}/healthians/partial_${bookingId}.pdf`,
+          report_url: PLACEHOLDER.STUB_PDF_URL,
           verified_at: now(),
           full_report: 0,
         },
@@ -151,7 +151,7 @@ export function buildHealthiansPayload(event: string, booking: Booking): unknown
         booking_id: bookingId,
         data: {
           vendor_customer_id: sampleId,
-          report_url: `${PLACEHOLDER.REPORT_BASE_URL}/healthians/full_${bookingId}.pdf`,
+          report_url: PLACEHOLDER.STUB_PDF_URL,
           verified_at: now(),
           full_report: 1,
         },
@@ -196,7 +196,7 @@ export function buildRedcliffePayload(event: string, booking: Booking): unknown 
     name,
     phonenumber: phone,
     client_refid: String(bookingId),
-    report_url: `${PLACEHOLDER.REPORT_BASE_URL}/redcliffe/${event}_${bookingId}.pdf`,
+    report_url: PLACEHOLDER.STUB_PDF_URL,
     timestamp: now().replace('T', ' ').replace('Z', ''),
     booking_type: 'main_booking',
     customer_email: booking.patientEmail ?? PLACEHOLDER.PATIENT_EMAIL,
@@ -217,12 +217,10 @@ export function buildEkinCarePayload(event: string, booking: Booking): unknown {
     booking_id: String(bookingId),
     appointment_id: String(appointmentId),
     api_customer_id: String(sampleId),
-    voucher_api_url: `https://playground.internal/ekin-care/voucher/${appointmentId}`,
+    voucher_api_url: PLACEHOLDER.STUB_PDF_URL,
     appointment_date_time: booking.collectionSlot ?? now(),
     phlebo_name: EKIN_PHLEBO_EVENTS.has(event) ? PLACEHOLDER.PHLEBO_NAME : '',
     phlebo_number: EKIN_PHLEBO_EVENTS.has(event) ? PLACEHOLDER.PHLEBO_PHONE : '',
-    reports: EKIN_REPORT_EVENTS.has(event)
-      ? [`${PLACEHOLDER.REPORT_BASE_URL}/ekin-care/report_${bookingId}.pdf`]
-      : [],
+    reports: EKIN_REPORT_EVENTS.has(event) ? [PLACEHOLDER.STUB_PDF_URL] : [],
   };
 }

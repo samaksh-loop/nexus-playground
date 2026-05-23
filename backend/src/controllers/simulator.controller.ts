@@ -1,15 +1,15 @@
 import type { Request, Response } from 'express';
-import { getAllBookings, deleteBooking } from '../models/booking.model';
-import { fireWebhook, runFullLifecycle } from '../services/webhook/sender.service';
-import { LIFECYCLES, SIDE_EVENTS } from '../constants';
-import type { Vendor } from '../types';
+import { getAllBookings, deleteBooking } from '../models/booking.model.js';
+import { fireWebhook } from '../services/webhook/sender.service.js';
+import { LIFECYCLES, SIDE_EVENTS } from '../constants.js';
+import type { Vendor } from '../types.js';
 
-export function listBookings(_req: Request, res: Response): void {
-  res.json(getAllBookings());
+export async function listBookings(_req: Request, res: Response): Promise<void> {
+  res.json(await getAllBookings());
 }
 
-export function removeBooking(req: Request, res: Response): void {
-  const removed = deleteBooking(req.params.id as string | number);
+export async function removeBooking(req: Request, res: Response): Promise<void> {
+  const removed = await deleteBooking(req.params.id as string | number);
   res.json({ removed });
 }
 

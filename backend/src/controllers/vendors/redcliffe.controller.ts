@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model';
-import { getSlots } from '../../models/config.model';
-import { BookingStatus, TEMP_TTL_MS } from '../../constants';
-import type { Booking, TempEntry } from '../../types';
+import { nextBookingId, createBooking, getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model.js';
+import { getSlots } from '../../models/config.model.js';
+import { BookingStatus, TEMP_TTL_MS } from '../../constants.js';
+import type { Booking, TempEntry } from '../../types.js';
 
 const pendingTemp = new Map<string, TempEntry>();
 
@@ -36,9 +36,9 @@ export function getTimeSlots(req: Request, res: Response): void {
   res.json({ status: 'success', message: 'Slots fetched', results });
 }
 
-export function createTemporaryBooking(req: Request, res: Response): void {
+export async function createTemporaryBooking(req: Request, res: Response): Promise<void> {
   purgeStaleTempBookings();
-  const tempId = nextBookingId();
+  const tempId = await nextBookingId();
   const body = req.body as Record<string, unknown>;
   pendingTemp.set(String(tempId), { body, expiresAt: Date.now() + TEMP_TTL_MS });
 
@@ -51,7 +51,7 @@ export function createTemporaryBooking(req: Request, res: Response): void {
   });
 }
 
-export function confirmTemporaryBooking(req: Request, res: Response): void {
+export async function confirmTemporaryBooking(req: Request, res: Response): Promise<void> {
   const body = req.body as Record<string, unknown>;
   const tempId = String(body.booking_id ?? body.temp_booking_id ?? '');
   const tempEntry = pendingTemp.get(tempId);
@@ -77,7 +77,7 @@ export function confirmTemporaryBooking(req: Request, res: Response): void {
     webhookHistory: [],
   };
 
-  createBooking(booking);
+  await createBooking(booking);
   pendingTemp.delete(tempId);
   res.json({ status: 'success', message: 'Booking confirmed', booking_id: tempId });
 }
@@ -86,17 +86,21 @@ export function updatePaymentMode(_req: Request, res: Response): void {
   res.json({ status: 'success', message: 'Payment mode updated' });
 }
 
-export function updateBookingHandler(req: Request, res: Response): void {
+export async function updateBookingHandler(req: Request, res: Response): Promise<void> {
   const body = req.body as Record<string, unknown>;
   const bookingId = body.booking_id as string | number | undefined;
   const bookingStatus = (body.booking_status as string | undefined) ?? 'updated';
 
   if (bookingId) {
-    const b = getBookingByPartnerId(bookingId as string | number);
-    if (b) updateBookingStatus(b.partnerBookingId, bookingStatus, {
-      event: `api.${bookingStatus}`, label: `Status → ${bookingStatus} via API`,
-      firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
-    });
+    const b = await getBookingByPartnerId(bookingId);
+    if (!b) {
+      console.warn(`[redcliffe] updateBooking: booking not found for bookingId=${bookingId}`);
+    } else {
+      await updateBookingStatus(b.partnerBookingId, bookingStatus, {
+        event: `api.${bookingStatus}`, label: `Status → ${bookingStatus} via API`,
+        firedAt: new Date().toISOString(), url: req.originalUrl, result: { status: 200, ok: true },
+      });
+    }
   }
   res.json({ status: 'success', message: 'Booking updated' });
 }

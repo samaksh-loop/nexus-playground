@@ -143,7 +143,7 @@ export const PLACEHOLDER = {
   PATIENT_NAME: 'Playground Patient',
   PATIENT_PHONE: '9999999999',
   PATIENT_EMAIL: 'test@playground.internal',
-  REPORT_BASE_URL: 'https://playground-reports.internal',
+  STUB_PDF_URL: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
   TRACKING_BASE_URL: 'https://playground.internal/track',
   FEEDBACK_URL: 'https://playground.internal/feedback',
   HUB_NAME: 'Playground Hub',

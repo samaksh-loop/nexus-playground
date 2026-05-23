@@ -1,9 +1,9 @@
 import crypto from 'crypto';
-import { getSettings, getWebhookSecrets } from '../../models/config.model';
-import { getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model';
-import { buildOrangeHealthPayload, buildHealthiansPayload, buildRedcliffePayload, buildEkinCarePayload } from './payload.service';
-import { LIFECYCLES, SIDE_EVENTS } from '../../constants';
-import type { Vendor, LifecycleStep, WebhookFireResult, LifecycleRunStep } from '../../types';
+import { getSettings, getWebhookSecrets } from '../../models/config.model.js';
+import { getBookingByPartnerId, updateBookingStatus } from '../../models/booking.model.js';
+import { buildOrangeHealthPayload, buildHealthiansPayload, buildRedcliffePayload, buildEkinCarePayload } from './payload.service.js';
+import { LIFECYCLES, SIDE_EVENTS } from '../../constants.js';
+import type { Vendor, LifecycleStep, WebhookFireResult } from '../../types.js';
 
 function hmacSha256(body: string, secret: string): string {
   return crypto.createHmac('sha256', secret).update(body).digest('hex');
@@ -40,7 +40,7 @@ export async function fireWebhook(
   event: string,
   partnerBookingId: string,
 ): Promise<WebhookFireResult> {
-  const booking = getBookingByPartnerId(partnerBookingId);
+  const booking = await getBookingByPartnerId(partnerBookingId);
   if (!booking) throw new Error(`Booking not found: ${partnerBookingId}`);
 
   const def = findEventDef(vendor, event);
@@ -59,7 +59,7 @@ export async function fireWebhook(
     result = { status: 0, ok: false, body: (err as Error).message };
   }
 
-  updateBookingStatus(partnerBookingId, def.nextStatus, {
+  await updateBookingStatus(partnerBookingId, def.nextStatus, {
     event,
     label: def.label,
     firedAt: new Date().toISOString(),
@@ -68,25 +68,4 @@ export async function fireWebhook(
   });
 
   return result;
-}
-
-export async function runFullLifecycle(
-  vendor: Vendor,
-  partnerBookingId: string,
-  delayMs: number,
-): Promise<LifecycleRunStep[]> {
-  const steps = LIFECYCLES[vendor] ?? [];
-  const results: LifecycleRunStep[] = [];
-
-  for (const step of steps) {
-    try {
-      const result = await fireWebhook(vendor, step.event, partnerBookingId);
-      results.push({ event: step.event, label: step.label, result });
-    } catch (err) {
-      results.push({ event: step.event, label: step.label, error: (err as Error).message });
-    }
-    if (delayMs > 0) await new Promise<void>((r) => setTimeout(r, delayMs));
-  }
-
-  return results;
 }

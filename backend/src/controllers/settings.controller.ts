@@ -2,22 +2,20 @@ import type { Request, Response } from 'express';
 import {
   getSettings, updateSettings,
   getAllSlots, updateSlots
-} from '../models/config.model';
-import type { Vendor, SlotConfig } from '../types';
+} from '../models/config.model.js';
+import type { Vendor, SlotConfig } from '../types.js';
 
 export function fetchSettings(_req: Request, res: Response): void {
-  res.json({ settings: getSettings()});
+  res.json({ settings: getSettings() });
 }
 
-export function saveSettings(req: Request, res: Response): void {
+export async function saveSettings(req: Request, res: Response): Promise<void> {
   const { nexusBaseUrl } = (req.body ?? {}) as { nexusBaseUrl?: unknown };
   if (nexusBaseUrl !== undefined && typeof nexusBaseUrl !== 'string') {
     res.status(400).json({ error: 'nexusBaseUrl must be a string' });
     return;
   }
-  const updated = updateSettings(
-    nexusBaseUrl === undefined ? {} : { nexusBaseUrl }
-  );
+  const updated = await updateSettings(nexusBaseUrl === undefined ? {} : { nexusBaseUrl });
   res.json(updated);
 }
 
@@ -25,7 +23,7 @@ export function fetchSlots(_req: Request, res: Response): void {
   res.json(getAllSlots());
 }
 
-export function saveSlots(req: Request, res: Response): void {
+export async function saveSlots(req: Request, res: Response): Promise<void> {
   const vendorParam = req.params.vendor;
   const allSlots = getAllSlots();
   if (typeof vendorParam !== 'string' || !(vendorParam in allSlots)) {
@@ -38,6 +36,6 @@ export function saveSlots(req: Request, res: Response): void {
     res.status(400).json({ error: 'body must be a JSON array' });
     return;
   }
-  const updated = updateSlots(vendor, body as never);
+  const updated = await updateSlots(vendor, body as never);
   res.json(updated);
 }
