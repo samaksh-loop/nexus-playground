@@ -3,6 +3,7 @@ import {
   listBookings,
   removeBooking,
   getLifecycles,
+  previewPayload,
   simulateWebhook,
   simulateLifecycle,
 } from '../controllers/simulator.controller.js';
@@ -12,6 +13,7 @@ const router = Router();
 router.get('/bookings',            listBookings);
 router.delete('/bookings/:id',     removeBooking);
 router.get('/lifecycles',          getLifecycles);
+router.post('/simulate/payload',   previewPayload);
 router.post('/simulate/webhook',   simulateWebhook);
 router.post('/simulate/lifecycle', simulateLifecycle);
 

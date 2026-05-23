@@ -1,5 +1,7 @@
 import type { Booking, LifecycleData } from '../types';
 import { useWebhookSimulator } from '../hooks/useWebhookSimulator';
+import { usePayloadEditor } from '../hooks/usePayloadEditor';
+import PayloadEditor from './PayloadEditor';
 import { Btn, BtnPrimary } from '../styles/common.styles';
 import {
   WebhookPanelWrap,
@@ -29,18 +31,20 @@ export default function WebhookPanel({ booking, lifecycleData, onRefresh }: Prop
   const {
     steps,
     running,
-    firingEvent,
     error,
     delayMs,
     setDelayMs,
-    fireEvent,
     runLifecycle,
     clearSteps,
   } = useWebhookSimulator(booking, onRefresh);
 
+  const editor = usePayloadEditor(onRefresh);
+
   const lifecycleSteps = lifecycleData?.lifecycles[booking.vendor] ?? [];
   const sideEvents = lifecycleData?.sideEvents[booking.vendor] ?? [];
-  const anyBusy = running || firingEvent !== null;
+  const allSteps = [...lifecycleSteps, ...sideEvents];
+  const pendingLabel = allSteps.find((s) => s.event === editor.pending?.event)?.label;
+  const anyBusy = running || editor.open;
 
   return (
     <WebhookPanelWrap>
@@ -51,9 +55,8 @@ export default function WebhookPanel({ booking, lifecycleData, onRefresh }: Prop
             {lifecycleSteps.map((step) => (
               <StepBtn
                 key={step.event}
-                $firing={firingEvent === step.event}
                 disabled={anyBusy}
-                onClick={() => void fireEvent(step.event)}
+                onClick={() => void editor.openEditor(booking.vendor, step.event, booking.partnerBookingId)}
               >
                 {step.label}
               </StepBtn>
@@ -69,9 +72,8 @@ export default function WebhookPanel({ booking, lifecycleData, onRefresh }: Prop
             {sideEvents.map((step) => (
               <StepBtn
                 key={step.event}
-                $firing={firingEvent === step.event}
                 disabled={anyBusy}
-                onClick={() => void fireEvent(step.event)}
+                onClick={() => void editor.openEditor(booking.vendor, step.event, booking.partnerBookingId)}
               >
                 {step.label}
               </StepBtn>
@@ -121,6 +123,18 @@ export default function WebhookPanel({ booking, lifecycleData, onRefresh }: Prop
       )}
 
       {error && <PanelError>{error}</PanelError>}
+
+      <PayloadEditor
+        open={editor.open}
+        loading={editor.loading}
+        firing={editor.firing}
+        error={editor.error}
+        payloadText={editor.payloadText}
+        eventLabel={pendingLabel}
+        onTextChange={editor.setPayloadText}
+        onFire={() => void editor.fire()}
+        onClose={editor.close}
+      />
     </WebhookPanelWrap>
   );
 }

@@ -35,10 +35,23 @@ function findEventDef(vendor: Vendor, event: string): LifecycleStep | undefined 
   return [...(LIFECYCLES[vendor] ?? []), ...(SIDE_EVENTS[vendor] ?? [])].find((e) => e.event === event);
 }
 
+export async function generatePayload(
+  vendor: Vendor,
+  event: string,
+  partnerBookingId: string,
+): Promise<unknown> {
+  const booking = await getBookingByPartnerId(partnerBookingId);
+  if (!booking) throw new Error(`Booking not found: ${partnerBookingId}`);
+  const def = findEventDef(vendor, event);
+  if (!def) throw new Error(`Unknown event "${event}" for vendor "${vendor}"`);
+  return buildPayload(vendor, event, booking);
+}
+
 export async function fireWebhook(
   vendor: Vendor,
   event: string,
   partnerBookingId: string,
+  customPayload?: unknown,
 ): Promise<WebhookFireResult> {
   const booking = await getBookingByPartnerId(partnerBookingId);
   if (!booking) throw new Error(`Booking not found: ${partnerBookingId}`);
@@ -47,7 +60,7 @@ export async function fireWebhook(
   if (!def) throw new Error(`Unknown event "${event}" for vendor "${vendor}"`);
 
   const { nexusBaseUrl } = getSettings();
-  const payload = buildPayload(vendor, event, booking);
+  const payload = customPayload ?? buildPayload(vendor, event, booking);
   const body = JSON.stringify(payload);
   const url = `${nexusBaseUrl}${def.path}`;
 

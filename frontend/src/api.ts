@@ -23,15 +23,28 @@ export function fetchLifecycles(): Promise<LifecycleData> {
   return request<LifecycleData>(ENDPOINTS.FETCH_LIFECYCLES);
 }
 
+export function previewPayload(
+  vendor: Vendor,
+  event: string,
+  partnerBookingId: string,
+): Promise<{ payload: unknown }> {
+  return request<{ payload: unknown }>(ENDPOINTS.PREVIEW_PAYLOAD, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vendor, event, partnerBookingId }),
+  });
+}
+
 export function simulateWebhook(
   vendor: Vendor,
   event: string,
   partnerBookingId: string,
+  customPayload?: unknown,
 ): Promise<WebhookFireResult> {
   return request<WebhookFireResult>(ENDPOINTS.SIMULATE_WEBHOOK, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vendor, event, partnerBookingId }),
+    body: JSON.stringify({ vendor, event, partnerBookingId, customPayload }),
   });
 }
 
