@@ -97,3 +97,18 @@ export const ResultBody = styled.pre`
   max-height: 180px;
   overflow-y: auto;
 `;
+
+export const CardDivider = styled.hr`
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.25rem 0;
+`;
+
+export const SectionLabel = styled.p`
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #9ca3af);
+`;
