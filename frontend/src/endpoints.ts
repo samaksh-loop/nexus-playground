@@ -4,6 +4,7 @@ export const ENDPOINTS = {
     FETCH_BOOKINGS: '/api/bookings',
     DELETE_BOOKING: (id: string) => `/api/bookings/${id}`,
     FETCH_LIFECYCLES: '/api/lifecycles',
+    PREVIEW_PAYLOAD: '/api/simulate/payload',
     SIMULATE_WEBHOOK: '/api/simulate/webhook',
     STREAM_LIFECYCLE: '/api/simulate/lifecycle',
     SETTINGS: '/api/settings',

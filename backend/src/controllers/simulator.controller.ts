@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { getAllBookings, deleteBooking } from '../models/booking.model.js';
-import { fireWebhook } from '../services/webhook/sender.service.js';
+import { fireWebhook, generatePayload } from '../services/webhook/sender.service.js';
 import { LIFECYCLES, SIDE_EVENTS } from '../constants.js';
 import type { Vendor } from '../types.js';
 
@@ -17,14 +17,28 @@ export function getLifecycles(_req: Request, res: Response): void {
   res.json({ lifecycles: LIFECYCLES, sideEvents: SIDE_EVENTS });
 }
 
-export async function simulateWebhook(req: Request, res: Response): Promise<void> {
+export async function previewPayload(req: Request, res: Response): Promise<void> {
   const { vendor, event, partnerBookingId } = req.body as Record<string, string | undefined>;
   if (!vendor || !event || !partnerBookingId) {
     res.status(400).json({ error: 'vendor, event, and partnerBookingId are required' });
     return;
   }
   try {
-    const result = await fireWebhook(vendor as Vendor, event, partnerBookingId);
+    const payload = await generatePayload(vendor as Vendor, event, partnerBookingId);
+    res.json({ payload });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+}
+
+export async function simulateWebhook(req: Request, res: Response): Promise<void> {
+  const { vendor, event, partnerBookingId, customPayload } = req.body as Record<string, unknown>;
+  if (!vendor || !event || !partnerBookingId) {
+    res.status(400).json({ error: 'vendor, event, and partnerBookingId are required' });
+    return;
+  }
+  try {
+    const result = await fireWebhook(vendor as Vendor, event as string, partnerBookingId as string, customPayload);
     res.json({ ok: true, result });
   } catch (err) {
     res.status(400).json({ ok: false, error: (err as Error).message });
