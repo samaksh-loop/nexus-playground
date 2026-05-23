@@ -2,7 +2,7 @@ import type { Booking, LifecycleData, Settings, SlotConfig, WebhookFireResult, V
 import { ENDPOINTS } from './endpoints';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init);
+  const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}${path}`, init);
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status}: ${text}`);
